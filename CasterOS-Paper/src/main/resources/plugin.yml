@@ -1,0 +1,14 @@
+name: CasterOS
+main: com.casteros.paper.CasterOSPaperPlugin
+version: 1.0.0
+api-version: 1.21
+website: https://github.com/dgaberstein/CasterOS
+authors: ["Daniel Gaberstein"]
+description: Cross-platform magic system for Paper/Folia.
+commands:
+  casteros:
+    description: Test command for CasterOS plugin
+    usage: /casteros
+  casteroskeybind:
+    description: Select or view your CasterOS magic keybind
+    usage: /casteroskeybind

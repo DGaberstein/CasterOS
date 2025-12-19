@@ -1,0 +1,2 @@
+rootProject.name = 'CasterOS'
+include 'CasterOS-Core', 'CasterOS-Paper', 'CasterOS-Sponge'

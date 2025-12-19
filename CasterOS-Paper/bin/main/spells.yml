@@ -1,0 +1,188 @@
+# spells.yml
+flare:
+  type: fireball
+  description: Launches a fireball in the direction the player is looking
+  aliases:
+    - fire
+    - fireball
+  
+shield:
+  type: shield
+  description: Creates a protective barrier
+  aliases:
+    - protection
+    - barrier
+
+blink:
+  type: teleport
+  description: Teleports the player forward
+  aliases:
+    - teleport
+    - tp
+
+frostbolt:
+  type: snowball
+  description: Launches a freezing snowball that slows targets
+
+gust:
+  type: wind
+  description: Pushes entities away from the caster
+
+heal:
+  type: heal
+  description: Instantly restores some health to the caster
+  aliases:
+    - cure
+    - mend
+
+lightning:
+  type: lightning
+  description: Strikes lightning at the target location
+  aliases:
+    - thunder
+    - bolt
+
+levitate:
+  type: levitate
+  description: Makes the caster float for a short time
+
+explosion:
+  type: explosion
+  description: Creates a small explosion at the target location
+
+invisibility:
+  type: invisibility
+  description: Makes the caster invisible for a short duration
+
+summonwolf:
+  type: summon
+  description: Summons a loyal wolf companion
+
+firewall:
+  type: firewall
+  description: Creates a wall of fire in front of the caster
+
+gravitywell:
+  type: gravity
+  description: Pulls nearby entities toward a point
+
+poisoncloud:
+  type: poison
+  description: Creates a lingering cloud that poisons enemies
+
+haste:
+  type: haste
+  description: Greatly increases the caster's movement speed
+
+slow:
+  type: slow
+  description: Slows all nearby enemies
+
+earthquake:
+  type: earthquake
+  description: Shakes the ground and knocks back entities
+
+arcane_blast:
+  type: arcane
+  description: Deals magic damage to all nearby enemies
+
+# --- Harry Potter Spells ---
+accio:
+  type: summon
+  description: Summons an object to the caster (Summoning Charm)
+
+alohomora:
+  type: unlock
+  description: Unlocks doors and other locked objects (Unlocking Charm)
+
+avada_kedavra:
+  type: curse
+  description: Instantly kills the target (Killing Curse)
+
+expelliarmus:
+  type: disarm
+  description: Disarms the target, knocking items from their hand (Disarming Charm)
+
+lumos:
+  type: light
+  description: Creates light at the tip of the caster's wand
+
+nox:
+  type: extinguish
+  description: Extinguishes light created by Lumos
+
+stupefy:
+  type: stun
+  description: Stuns the target (Stunning Spell)
+
+protego:
+  type: shield
+  description: Conjures a magical shield that blocks spells (Shield Charm)
+
+wingardium_leviosa:
+  type: levitate
+  description: Levitates and moves objects (Levitation Charm)
+
+expecto_patronum:
+  type: patronus
+  description: Summons a Patronus to ward off Dementors (Patronus Charm)
+
+sectumsempra:
+  type: curse
+  description: Causes deep gashes to appear on the target (Dark Curse)
+
+imperio:
+  type: curse
+  description: Controls the actions of the target (Unforgivable Curse)
+
+crucio:
+  type: curse
+  description: Inflicts intense pain on the target (Unforgivable Curse)
+
+obliviate:
+  type: memory
+  description: Erases or modifies memories of the target
+
+reparo:
+  type: repair
+  description: Repairs broken objects (Mending Charm)
+
+incendio:
+  type: fire
+  description: Conjures a jet of flame from the caster's wand
+
+aguamenti:
+  type: water
+  description: Produces a jet of clean, drinkable water from the wand tip
+
+arresto_momentum:
+  type: slow
+  description: Slows the movement of the target (Slowing Charm)
+
+aparecium:
+  type: reveal
+  description: Reveals invisible ink or hidden messages (Revealing Charm)
+
+expulso:
+  type: explosion
+  description: Causes an object to explode violently
+
+confundo:
+  type: confuse
+  description: Confuses and disorients the target (Confundus Charm)
+
+impervius:
+  type: repel
+  description: Makes objects repel water and other substances
+
+silencio:
+  type: silence
+  description: Silences the target, preventing them from making noise
+
+tarantallegra:
+  type: dance
+  description: Forces the target to dance uncontrollably
+
+ridikkulus:
+  type: transform
+  description: Transforms a Boggart into something humorous (Boggart-Banishing Spell)

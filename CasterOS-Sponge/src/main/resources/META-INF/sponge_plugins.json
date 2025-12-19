@@ -1,0 +1,10 @@
+[
+  {
+    "id": "casteros",
+    "name": "CasterOS",
+    "version": "1.0.0",
+    "description": "Cross-platform magic system for Sponge.",
+    "entrypoint": "com.casteros.sponge.CasterOSSpongePlugin",
+    "authors": ["YourName"]
+  }
+]
