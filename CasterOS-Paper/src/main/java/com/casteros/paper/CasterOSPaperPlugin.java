@@ -248,20 +248,50 @@ public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
                         magicMode.put(uuid, false);
                         return;
                     }
+                    // Particle effect logic for spell casting
+                    org.bukkit.Location loc = player.getLocation();
                     switch (type) {
                         case "fireball":
-                            player.launchProjectile(org.bukkit.entity.Fireball.class, player.getLocation().getDirection().multiply(2));
+                            player.launchProjectile(org.bukkit.entity.Fireball.class, loc.getDirection().multiply(2));
+                            player.getWorld().spawnParticle(org.bukkit.Particle.FLAME, loc, 30, 0.5, 0.5, 0.5, 0.01);
                             player.sendMessage(Component.text("Flare spell cast! Fireball launched.").color(net.kyori.adventure.text.format.NamedTextColor.GOLD));
                             break;
                         case "shield":
+                            // Use SPELL particle as a visual shield effect for maximum compatibility
+                            player.getWorld().spawnParticle(org.bukkit.Particle.SPELL, loc, 20, 0.5, 1, 0.5, 0.01);
                             player.sendMessage(Component.text("Shield spell cast! (effect not implemented)").color(net.kyori.adventure.text.format.NamedTextColor.AQUA));
                             break;
                         case "teleport":
-                            player.teleport(player.getLocation().add(player.getLocation().getDirection().multiply(5)));
+                            player.teleport(loc.add(loc.getDirection().multiply(5)));
+                            player.getWorld().spawnParticle(org.bukkit.Particle.END_ROD, player.getLocation(), 40, 0.5, 0.5, 0.5, 0.01);
                             player.sendMessage(Component.text("Blink spell cast! Teleported forward.").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
                             break;
-                        // Add more spell types as needed
+                        case "snowball":
+                            player.getWorld().spawnParticle(org.bukkit.Particle.SNOWBALL, loc, 25, 0.5, 0.5, 0.5, 0.01);
+                            player.sendMessage(Component.text("Frostbolt spell cast! Snowball launched.").color(net.kyori.adventure.text.format.NamedTextColor.AQUA));
+                            break;
+                        case "lightning":
+                            player.getWorld().spawnParticle(org.bukkit.Particle.ELECTRIC_SPARK, loc, 50, 0.5, 0.5, 0.5, 0.01);
+                            player.sendMessage(Component.text("Lightning spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.YELLOW));
+                            break;
+                        case "heal":
+                            player.getWorld().spawnParticle(org.bukkit.Particle.HEART, loc, 15, 0.5, 1, 0.5, 0.01);
+                            player.sendMessage(Component.text("Heal spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.GREEN));
+                            break;
+                        case "explosion":
+                            player.getWorld().spawnParticle(org.bukkit.Particle.EXPLOSION_NORMAL, loc, 35, 0.5, 0.5, 0.5, 0.01);
+                            player.sendMessage(Component.text("Explosion spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.RED));
+                            break;
+                        case "levitate":
+                            player.getWorld().spawnParticle(org.bukkit.Particle.CLOUD, loc, 20, 0.5, 1, 0.5, 0.01);
+                            player.sendMessage(Component.text("Levitate spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
+                            break;
+                        case "arcane":
+                            player.getWorld().spawnParticle(org.bukkit.Particle.SPELL, loc, 30, 0.5, 0.5, 0.5, 0.01);
+                            player.sendMessage(Component.text("Arcane spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
+                            break;
                         default:
+                            player.getWorld().spawnParticle(org.bukkit.Particle.CRIT_MAGIC, loc, 10, 0.5, 0.5, 0.5, 0.01);
                             errorCode = "ERR-SPELL-TYPE-NOT-IMPL";
                             player.sendMessage(Component.text("[CasterOS Error " + errorCode + "] Spell type not implemented: " + type).color(net.kyori.adventure.text.format.NamedTextColor.RED));
                             getLogger().warning("[" + errorCode + "] Spell type not implemented: " + type);
