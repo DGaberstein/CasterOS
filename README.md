@@ -5,8 +5,6 @@
 
 A cross-platform Minecraft magic system supporting Bukkit, Paper, Folia, and Sponge. 
 
-A cross-platform Minecraft magic system supporting Bukkit, Paper, Folia, and Sponge. 
-
 ## Project Structure
 - **CasterOS-Core**: Core spell logic, data objects, and incantation parsing. No Minecraft API dependencies.
 - **CasterOS-Paper**: Bukkit/Paper/Purpur/Folia implementation. Shades the Core module and includes Folia API.
