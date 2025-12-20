@@ -1,4 +1,9 @@
+
 # CasterOS
+
+[![Modrinth](https://img.shields.io/modrinth/dt/casteros?color=5da545&label=Modrinth&logo=modrinth)](https://modrinth.com/plugin/casteros)
+
+A cross-platform Minecraft magic system supporting Bukkit, Paper, Folia, and Sponge. 
 
 A cross-platform Minecraft magic system supporting Bukkit, Paper, Folia, and Sponge. 
 
