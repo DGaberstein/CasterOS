@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import org.spongepowered.math.vector.Vector3d;
 
 // Plugin metadata is now in META-INF/plugins/casteros.plugin.yml for SpongeAPI 8+
 public class CasterOSSpongePlugin {
@@ -108,7 +109,38 @@ public class CasterOSSpongePlugin {
             System.err.println("[CasterOS] Player '" + player.name() + "' tried invalid spell: '" + match.spellKey + "' (" + err + ")");
             return;
         }
-        // ...spell effect logic (to be implemented per Sponge API)...
+        // Particle effect logic for spell casting
+        String spellType = spellData.getOrDefault("type", "").toString();
+        org.spongepowered.api.world.server.ServerWorld world = player.world();
+        Vector3d pos = player.position();
+        org.spongepowered.api.effect.particle.ParticleEffect effect;
+        switch (spellType) {
+            case "fireball":
+                effect = org.spongepowered.api.effect.particle.ParticleEffect.builder().type(org.spongepowered.api.effect.particle.ParticleTypes.FLAME).quantity(30).build();
+                break;
+            case "shield":
+                effect = org.spongepowered.api.effect.particle.ParticleEffect.builder().type(org.spongepowered.api.effect.particle.ParticleTypes.BARRIER).quantity(20).build();
+                break;
+            case "teleport":
+                effect = org.spongepowered.api.effect.particle.ParticleEffect.builder().type(org.spongepowered.api.effect.particle.ParticleTypes.END_ROD).quantity(40).build();
+                break;
+            case "heal":
+                effect = org.spongepowered.api.effect.particle.ParticleEffect.builder().type(org.spongepowered.api.effect.particle.ParticleTypes.HEART).quantity(15).build();
+                break;
+            case "explosion":
+                effect = org.spongepowered.api.effect.particle.ParticleEffect.builder().type(org.spongepowered.api.effect.particle.ParticleTypes.EXPLOSION).quantity(35).build();
+                break;
+            case "levitate":
+                effect = org.spongepowered.api.effect.particle.ParticleEffect.builder().type(org.spongepowered.api.effect.particle.ParticleTypes.CLOUD).quantity(20).build();
+                break;
+            case "arcane":
+                effect = org.spongepowered.api.effect.particle.ParticleEffect.builder().type(org.spongepowered.api.effect.particle.ParticleTypes.ENCHANT).quantity(30).build();
+                break;
+            default:
+                effect = org.spongepowered.api.effect.particle.ParticleEffect.builder().type(org.spongepowered.api.effect.particle.ParticleTypes.CRIT).quantity(10).build();
+                break;
+        }
+        world.spawnParticles(effect, pos);
         player.sendMessage(Component.text("[CasterOS] Cast spell: " + match.spellKey + " (alias: " + match.matchedAlias + ")", NamedTextColor.GREEN));
         System.out.println("[CasterOS] Player '" + player.name() + "' cast spell: '" + match.spellKey + "' (alias: " + match.matchedAlias + ")");
         cp.setLastSpell(match.spellKey);
