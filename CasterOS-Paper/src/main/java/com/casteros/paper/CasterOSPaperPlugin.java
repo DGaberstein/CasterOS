@@ -6,51 +6,95 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.player.PlayerSwapHandItemsEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-// Use PlayerChatEvent for modern Paper, fallback to AsyncPlayerChatEvent for older versions
 import org.bukkit.event.player.AsyncPlayerChatEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.plugin.PluginManager;
+import java.util.*;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.Material;
+import com.casteros.paper.spell.SpellRegistry;
+import com.casteros.paper.spell.Spell;
+
 import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
- // Tracks if player is selecting keybind via action
 
 public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
+    // Track players in spell mode (by UUID)
+    private final Set<UUID> spellModePlayers = new HashSet<>();
+    private SpellRegistry spellRegistry;
+    // Map normalized incantation/alias -> spell type (from config)
+    private final Map<String, String> incantationToType = new HashMap<>();
 
-    private final HashMap<UUID, Boolean> keybindSelection = new HashMap<>();
-    // Stores each player's chosen keybind (default: swap hand)
-    private final HashMap<UUID, String> playerKeybinds = new HashMap<>();
-    // Tracks if player is in magic mode
-    private final HashMap<UUID, Boolean> magicMode = new HashMap<>();
-    // Stores spells loaded from config
-    private Map<String, Map<String, Object>> spells = new HashMap<>();
-    public void onEnable() {
-        getLogger().info("CasterOS enabled!");
-        PluginManager pm = Bukkit.getPluginManager();
-        pm.registerEvents(this, this);
-        // Load spells from spells.yml
-        File spellsFile = new File(getDataFolder(), "spells.yml");
-        if (!spellsFile.exists()) {
-            saveResource("spells.yml", false);
+    // Utility: is the item a magic wand? (named stick)
+    private boolean isMagicWand(ItemStack item) {
+        if (item == null || item.getType() != Material.STICK) return false;
+        if (!item.hasItemMeta()) return false;
+        var meta = item.getItemMeta();
+        // Try to use Adventure Component API if available
+        try {
+            java.lang.reflect.Method m = meta.getClass().getMethod("displayName");
+            Object comp = m.invoke(meta);
+            if (comp != null) {
+                String plain = comp.toString().toLowerCase();
+                return plain.contains("wand");
+            }
+        } catch (Exception ignore) {}
+        // Fallback to deprecated getDisplayName()
+        if (meta.hasDisplayName()) {
+            @SuppressWarnings("deprecation")
+            String name = meta.getDisplayName();
+            return name != null && name.toLowerCase().contains("wand");
         }
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(spellsFile);
-        for (String key : config.getKeys(false)) {
-            Object value = config.get(key);
-            if (value instanceof Map) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> spell = (Map<String, Object>) value;
-                spells.put(key, spell);
+        return false;
+    }
+
+    // Block opening inventory when holding a magic wand
+    @EventHandler
+    public void onInventoryOpen(org.bukkit.event.inventory.InventoryOpenEvent event) {
+        if (event.getPlayer() instanceof Player) {
+            Player player = (Player) event.getPlayer();
+            if (isMagicWand(player.getInventory().getItemInMainHand())) {
+                event.setCancelled(true);
+                player.sendMessage("§cYou cannot open your inventory while holding your magic wand!");
             }
         }
-        getLogger().info("Loaded spells: " + spells.keySet());
+    }
+
+    @Override
+    public void onEnable() {
+        // Register events
+        Bukkit.getPluginManager().registerEvents(this, this);
+        // Register spells
+        spellRegistry = new SpellRegistry(this);
+        spellRegistry.registerAllSpells();
+
+        // Load spells.yml and build incantation/alias map
+        try {
+            File configFile = new File(getDataFolder().getParentFile(), getName() + "/src/main/resources/spells.yml");
+            if (!configFile.exists()) {
+                configFile = new File(getDataFolder(), "spells.yml");
+            }
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+            for (String key : config.getKeys(false)) {
+                String normalized = key.toLowerCase().replace("_", "").replace(" ", "");
+                String type = config.getString(key + ".type");
+                if (type != null) {
+                    incantationToType.put(normalized, type.toLowerCase());
+                    // Add aliases
+                    List<String> aliases = config.getStringList(key + ".aliases");
+                    if (aliases != null) {
+                        for (String alias : aliases) {
+                            String normAlias = alias.toLowerCase().replace("_", "").replace(" ", "");
+                            incantationToType.put(normAlias, type.toLowerCase());
+                        }
+                    }
+                }
+            }
+            getLogger().info("Loaded spell incantations and aliases from spells.yml");
+        } catch (Exception e) {
+            getLogger().warning("Failed to load spells.yml for incantations: " + e.getMessage());
+        }
+        getLogger().info("CasterOS enabled!");
     }
 
     @Override
@@ -63,7 +107,7 @@ public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
         if (label.equalsIgnoreCase("casteros")) {
             if (sender instanceof Player) {
                 Player player = (Player) sender;
-                player.sendMessage("§dCasterOS is active! Welcome to the magic system.");
+                player.sendMessage("§dCasterOS is active! Right-click with a stick to cast a spell.");
             } else {
                 sender.sendMessage("CasterOS command can only be used by players.");
             }
@@ -72,8 +116,7 @@ public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
         if (label.equalsIgnoreCase("casteroskeybind") || label.equalsIgnoreCase("casteros:keybind")) {
             if (sender instanceof Player) {
                 Player player = (Player) sender;
-                keybindSelection.put(player.getUniqueId(), true);
-                player.sendMessage("§eCasterOS Keybind Selection: Perform your desired action (swap hand, drop item, sneak, jump, interact) to set your magic keybind.");
+                player.sendMessage("§eKeybind selection is disabled. Use a stick to cast spells.");
             } else {
                 sender.sendMessage("CasterOS keybind command can only be used by players.");
             }
@@ -82,283 +125,106 @@ public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
         return false;
     }
 
-    // Listen for key events to set keybind
-    @EventHandler
-    public void onSwapHand(PlayerSwapHandItemsEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        if (keybindSelection.getOrDefault(uuid, false)) {
-            playerKeybinds.put(uuid, "Swap Hand Items");
-            keybindSelection.put(uuid, false);
-            event.getPlayer().sendMessage("§aCasterOS keybind set to: Swap Hand Items!");
-            event.setCancelled(true);
-            return;
-        }
-        if ("Swap Hand Items".equals(playerKeybinds.getOrDefault(uuid, "Swap Hand Items (default)"))) {
-            if (!magicMode.getOrDefault(uuid, false)) {
-                magicMode.put(uuid, true);
-                event.getPlayer().sendMessage("§dCasterOS Magic Mode: Type your spell incantation. You cannot move or act until you cast a spell or exit.");
-                event.getPlayer().sendActionBar(Component.text("[ CasterOS Magic Mode - Type a spell! ]").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
-                event.getPlayer().getWorld().spawnParticle(org.bukkit.Particle.CRIT_MAGIC, event.getPlayer().getLocation(), 30, 1, 1, 1, 0.2);
-            } else {
-                magicMode.put(uuid, false);
-                event.getPlayer().sendMessage("§cCasterOS: Magic mode exited. You can move and act again.");
-            }
-            event.setCancelled(true);
-        }
-    }
 
-    @EventHandler
-    public void onDropItem(PlayerDropItemEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        if (keybindSelection.getOrDefault(uuid, false)) {
-            playerKeybinds.put(uuid, "Drop Item");
-            keybindSelection.put(uuid, false);
-            event.getPlayer().sendMessage("§aCasterOS keybind set to: Drop Item!");
-            event.setCancelled(true);
-            return;
-        }
-        if ("Drop Item".equals(playerKeybinds.getOrDefault(uuid, ""))) {
-            if (!magicMode.getOrDefault(uuid, false)) {
-                magicMode.put(uuid, true);
-                event.getPlayer().sendMessage("§dCasterOS Magic Mode: Type your spell incantation. You cannot move or act until you cast a spell or exit.");
-                event.getPlayer().sendActionBar(Component.text("[ CasterOS Magic Mode - Type a spell! ]").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
-                event.getPlayer().getWorld().spawnParticle(org.bukkit.Particle.CRIT_MAGIC, event.getPlayer().getLocation(), 30, 1, 1, 1, 0.2);
-            } else {
-                magicMode.put(uuid, false);
-                event.getPlayer().sendMessage("§cCasterOS: Magic mode exited. You can move and act again.");
-            }
-            event.setCancelled(true);
-        }
-    }
 
-    // Sneak keybind
+    // Enable/disable spell mode when switching hotbar slot
     @EventHandler
-    public void onSneak(org.bukkit.event.player.PlayerToggleSneakEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        if (keybindSelection.getOrDefault(uuid, false)) {
-            playerKeybinds.put(uuid, "Sneak");
-            keybindSelection.put(uuid, false);
-            event.getPlayer().sendMessage("§aCasterOS keybind set to: Sneak!");
-            return;
-        }
-        if ("Sneak".equals(playerKeybinds.getOrDefault(uuid, "")) && event.isSneaking()) {
-            if (!magicMode.getOrDefault(uuid, false)) {
-                magicMode.put(uuid, true);
-                event.getPlayer().sendMessage("§dCasterOS Magic Mode: Type your spell incantation. You cannot move or act until you cast a spell or exit.");
-                event.getPlayer().sendActionBar(Component.text("[ CasterOS Magic Mode - Type a spell! ]").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
-                event.getPlayer().getWorld().spawnParticle(org.bukkit.Particle.CRIT_MAGIC, event.getPlayer().getLocation(), 30, 1, 1, 1, 0.2);
-            } else {
-                magicMode.put(uuid, false);
-                event.getPlayer().sendMessage("§cCasterOS: Magic mode exited. You can move and act again.");
-            }
-        }
-    }
-
-    // Jump keybind
-    // NOTE: PlayerJumpEvent is not available in standard Bukkit/Paper. You may need a custom implementation or plugin for jump detection.
-
-    // Interact keybind
-    @EventHandler
-    public void onInteract(org.bukkit.event.player.PlayerInteractEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        if (keybindSelection.getOrDefault(uuid, false)) {
-            playerKeybinds.put(uuid, "Interact");
-            keybindSelection.put(uuid, false);
-            event.getPlayer().sendMessage("§aCasterOS keybind set to: Interact!");
-            return;
-        }
-        if ("Interact".equals(playerKeybinds.getOrDefault(uuid, ""))) {
-            if (!magicMode.getOrDefault(uuid, false)) {
-                magicMode.put(uuid, true);
-                event.getPlayer().sendMessage("§dCasterOS Magic Mode: Type your spell incantation. You cannot move or act until you cast a spell or exit.");
-                event.getPlayer().sendActionBar(Component.text("[ CasterOS Magic Mode - Type a spell! ]").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
-                event.getPlayer().getWorld().spawnParticle(org.bukkit.Particle.CRIT_MAGIC, event.getPlayer().getLocation(), 30, 1, 1, 1, 0.2);
-            } else {
-                magicMode.put(uuid, false);
-                event.getPlayer().sendMessage("§cCasterOS: Magic mode exited. You can move and act again.");
-            }
-        }
-    }
-
-    // Use AsyncPlayerChatEvent for chat input (still the only supported way for plugins as of Paper 1.21)
-    @SuppressWarnings("deprecation")
-    @EventHandler
-    public void onChat(AsyncPlayerChatEvent event) {
+    public void onItemHeldChange(org.bukkit.event.player.PlayerItemHeldEvent event) {
         Player player = event.getPlayer();
-        UUID uuid = player.getUniqueId();
-        if (magicMode.getOrDefault(uuid, false)) {
-            event.setCancelled(true);
-            String incantation = event.getMessage().trim().toLowerCase();
-            String matchedKey = null;
-            String errorCode = null;
-            try {
-                if (spells == null) {
-                    errorCode = "ERR-SPELLS-NOT-LOADED";
-                    player.sendMessage(Component.text("[CasterOS Error " + errorCode + "] Spells not loaded. Contact admin.").color(net.kyori.adventure.text.format.NamedTextColor.RED));
-                    getLogger().severe("[" + errorCode + "] Spells map is null!");
-                    magicMode.put(uuid, false);
-                    return;
-                }
-                // Try direct match
-                if (spells.containsKey(incantation)) {
-                    matchedKey = incantation;
-                } else {
-                    // Try alias match (including aliases list in each spell)
-                    for (String key : spells.keySet()) {
-                        if (key.equalsIgnoreCase(incantation) || key.replace("_", "").equalsIgnoreCase(incantation.replace(" ", ""))) {
-                            matchedKey = key;
-                            break;
-                        }
-                        Map<String, Object> spell = spells.get(key);
-                        if (spell == null) {
-                            errorCode = "ERR-SPELL-NOT-FOUND";
-                            getLogger().warning("[" + errorCode + "] Spell key '" + key + "' is null in spells.yml");
-                            continue;
-                        }
-                        Object aliasesObj = spell.get("aliases");
-                        if (aliasesObj instanceof java.util.List) {
-                            java.util.List<?> aliases = (java.util.List<?>) aliasesObj;
-                            for (Object aliasObj : aliases) {
-                                if (aliasObj != null) {
-                                    String alias = aliasObj.toString().trim().toLowerCase();
-                                    if (alias.equals(incantation)) {
-                                        matchedKey = key;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        if (matchedKey != null) break;
-                    }
-                }
-                if (matchedKey != null) {
-                    Map<String, Object> spell = (Map<String, Object>) spells.get(matchedKey);
-                    if (spell == null) {
-                        errorCode = "ERR-SPELL-NULL";
-                        player.sendMessage(Component.text("[CasterOS Error " + errorCode + "] Spell data missing for '" + matchedKey + "'. Contact admin.").color(net.kyori.adventure.text.format.NamedTextColor.RED));
-                        getLogger().severe("[" + errorCode + "] Spell data is null for key: " + matchedKey);
-                        magicMode.put(uuid, false);
-                        return;
-                    }
-                    String type = (String) spell.get("type");
-                    if (type == null) {
-                        errorCode = "ERR-SPELL-NO-TYPE";
-                        player.sendMessage(Component.text("[CasterOS Error " + errorCode + "] Spell '" + matchedKey + "' missing type. Contact admin.").color(net.kyori.adventure.text.format.NamedTextColor.RED));
-                        getLogger().severe("[" + errorCode + "] Spell '" + matchedKey + "' missing type field.");
-                        magicMode.put(uuid, false);
-                        return;
-                    }
-                    // Particle effect logic for spell casting
-                    org.bukkit.Location loc = player.getLocation();
-                    switch (type) {
-                        case "fireball":
-                            player.launchProjectile(org.bukkit.entity.Fireball.class, loc.getDirection().multiply(2));
-                            player.getWorld().spawnParticle(org.bukkit.Particle.FLAME, loc, 30, 0.5, 0.5, 0.5, 0.01);
-                            player.sendMessage(Component.text("Flare spell cast! Fireball launched.").color(net.kyori.adventure.text.format.NamedTextColor.GOLD));
-                            break;
-                        case "shield":
-                            // Use SPELL particle as a visual shield effect for maximum compatibility
-                            player.getWorld().spawnParticle(org.bukkit.Particle.SPELL, loc, 20, 0.5, 1, 0.5, 0.01);
-                            player.sendMessage(Component.text("Shield spell cast! (effect not implemented)").color(net.kyori.adventure.text.format.NamedTextColor.AQUA));
-                            break;
-                        case "teleport":
-                            player.teleport(loc.add(loc.getDirection().multiply(5)));
-                            player.getWorld().spawnParticle(org.bukkit.Particle.END_ROD, player.getLocation(), 40, 0.5, 0.5, 0.5, 0.01);
-                            player.sendMessage(Component.text("Blink spell cast! Teleported forward.").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
-                            break;
-                        case "snowball":
-                            player.getWorld().spawnParticle(org.bukkit.Particle.SNOWBALL, loc, 25, 0.5, 0.5, 0.5, 0.01);
-                            player.sendMessage(Component.text("Frostbolt spell cast! Snowball launched.").color(net.kyori.adventure.text.format.NamedTextColor.AQUA));
-                            break;
-                        case "lightning":
-                            player.getWorld().spawnParticle(org.bukkit.Particle.ELECTRIC_SPARK, loc, 50, 0.5, 0.5, 0.5, 0.01);
-                            player.sendMessage(Component.text("Lightning spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.YELLOW));
-                            break;
-                        case "heal":
-                            player.getWorld().spawnParticle(org.bukkit.Particle.HEART, loc, 15, 0.5, 1, 0.5, 0.01);
-                            player.sendMessage(Component.text("Heal spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.GREEN));
-                            break;
-                        case "explosion":
-                            player.getWorld().spawnParticle(org.bukkit.Particle.EXPLOSION_NORMAL, loc, 35, 0.5, 0.5, 0.5, 0.01);
-                            player.sendMessage(Component.text("Explosion spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.RED));
-                            break;
-                        case "levitate":
-                            player.getWorld().spawnParticle(org.bukkit.Particle.CLOUD, loc, 20, 0.5, 1, 0.5, 0.01);
-                            player.sendMessage(Component.text("Levitate spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
-                            break;
-                        case "arcane":
-                            player.getWorld().spawnParticle(org.bukkit.Particle.SPELL, loc, 30, 0.5, 0.5, 0.5, 0.01);
-                            player.sendMessage(Component.text("Arcane spell cast!").color(net.kyori.adventure.text.format.NamedTextColor.LIGHT_PURPLE));
-                            break;
-                        default:
-                            player.getWorld().spawnParticle(org.bukkit.Particle.CRIT_MAGIC, loc, 10, 0.5, 0.5, 0.5, 0.01);
-                            errorCode = "ERR-SPELL-TYPE-NOT-IMPL";
-                            player.sendMessage(Component.text("[CasterOS Error " + errorCode + "] Spell type not implemented: " + type).color(net.kyori.adventure.text.format.NamedTextColor.RED));
-                            getLogger().warning("[" + errorCode + "] Spell type not implemented: " + type);
-                            break;
-                    }
-                    magicMode.put(uuid, false);
-                    player.sendMessage("§aCasterOS: Spell cast! Magic mode exited. You can move and act again.");
-                } else {
-                    errorCode = "ERR-INCANTATION-NOT-FOUND";
-                    player.sendMessage(Component.text("[CasterOS Error " + errorCode + "] Unknown incantation: " + incantation).color(net.kyori.adventure.text.format.NamedTextColor.RED));
-                    if (spells != null && !spells.isEmpty()) {
-                        StringBuilder sb = new StringBuilder("§7Available spells: ");
-                        for (String key : spells.keySet()) {
-                            sb.append(key).append(", ");
-                        }
-                        player.sendMessage(sb.substring(0, sb.length() - 2));
-                    }
-                    // Remain in magic mode until a valid spell is cast or user exits with keybind
-                }
-            } catch (Exception ex) {
-                errorCode = "ERR-UNEXPECTED";
-                player.sendMessage(Component.text("[CasterOS Error " + errorCode + "] Unexpected error. Contact admin.").color(net.kyori.adventure.text.format.NamedTextColor.RED));
-                getLogger().severe("[" + errorCode + "] Unexpected error in spell casting: " + ex.getMessage());
-                ex.printStackTrace();
-                magicMode.put(uuid, false);
+        ItemStack newItem = player.getInventory().getItem(event.getNewSlot());
+        if (isMagicWand(newItem)) {
+            if (spellModePlayers.add(player.getUniqueId())) {
+                player.sendMessage("§6§l[Spellcasting] §eSpell mode enabled! Type a spell name in chat.");
+            }
+        } else {
+            if (spellModePlayers.remove(player.getUniqueId())) {
+                player.sendMessage("§7Spell mode disabled.");
             }
         }
     }
 
+
+    // Enable spell mode on join if holding wand
     @EventHandler
-    public void onPlayerMoveWhileCasting(PlayerMoveEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        if (magicMode.getOrDefault(uuid, false)) {
-            event.setCancelled(true);
-            event.getPlayer().sendActionBar(Component.text("§cYou cannot move in magic mode!").color(net.kyori.adventure.text.format.NamedTextColor.RED));
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (isMagicWand(item)) {
+            spellModePlayers.add(player.getUniqueId());
+            player.sendMessage("§6§l[Spellcasting] §eSpell mode enabled! Type a spell name in chat.");
         }
     }
 
+
+    // Update spell mode on offhand/mainhand swap
     @EventHandler
-    public void onAttackWhileCasting(EntityDamageByEntityEvent event) {
-        if (event.getDamager() instanceof Player) {
-            Player player = (Player) event.getDamager();
-            UUID uuid = player.getUniqueId();
-            if (magicMode.getOrDefault(uuid, false)) {
-                event.setCancelled(true);
-                player.sendActionBar(Component.text("§cYou cannot attack in magic mode!").color(net.kyori.adventure.text.format.NamedTextColor.RED));
+    public void onSwapItems(org.bukkit.event.player.PlayerSwapHandItemsEvent event) {
+        Player player = event.getPlayer();
+        ItemStack main = player.getInventory().getItemInMainHand();
+        if (isMagicWand(main)) {
+            if (spellModePlayers.add(player.getUniqueId())) {
+                player.sendMessage("§6§l[Spellcasting] §eSpell mode enabled! Type a spell name in chat.");
+            }
+        } else {
+            if (spellModePlayers.remove(player.getUniqueId())) {
+                player.sendMessage("§7Spell mode disabled.");
             }
         }
     }
 
+
+    // Intercept chat for spell casting (dynamic, config-driven) - legacy event
     @EventHandler
-    public void onInventoryOpen(InventoryOpenEvent event) {
-        if (event.getPlayer() instanceof Player) {
-            Player player = (Player) event.getPlayer();
-            if (magicMode.getOrDefault(player.getUniqueId(), false)) {
-                event.setCancelled(true);
-                player.sendActionBar(Component.text("§cYou cannot open inventory in magic mode!").color(net.kyori.adventure.text.format.NamedTextColor.RED));
-            }
-        }
+    public void onAsyncPlayerChat(AsyncPlayerChatEvent event) {
+        handleSpellChat(event.getPlayer(), event.getMessage(), event);
     }
 
-    @EventHandler
-    public void onDropItemWhileCasting(PlayerDropItemEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
-        if (magicMode.getOrDefault(uuid, false)) {
-            event.setCancelled(true);
-            event.getPlayer().sendActionBar(Component.text("§cYou cannot drop items in magic mode!").color(net.kyori.adventure.text.format.NamedTextColor.RED));
-        }
+    // Intercept chat for spell casting (dynamic, config-driven) - modern event (Paper 1.19+)
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerChat(org.bukkit.event.player.PlayerChatEvent event) {
+        handleSpellChat(event.getPlayer(), event.getMessage(), event);
     }
+
+    // Shared chat handler for both events
+    private void handleSpellChat(Player player, String message, org.bukkit.event.Cancellable event) {
+        if (!spellModePlayers.contains(player.getUniqueId())) {
+            getLogger().info("[DEBUG] Player " + player.getName() + " is not in spell mode.");
+            return;
+        }
+        ItemStack wand = player.getInventory().getItemInMainHand();
+        if (!isMagicWand(wand)) {
+            getLogger().info("[DEBUG] Player " + player.getName() + " is not holding a wand.");
+            return;
+        }
+        event.setCancelled(true);
+        String incantation = message.trim().toLowerCase().replace("_", "").replace(" ", "");
+        getLogger().info("[DEBUG] Player " + player.getName() + " cast attempt: '" + incantation + "'");
+        String type = incantationToType.get(incantation);
+        getLogger().info("[DEBUG] Lookup type for incantation: '" + incantation + "' => '" + type + "'");
+        if (type != null) {
+            Spell spell = spellRegistry.getSpell(type);
+            getLogger().info("[DEBUG] SpellRegistry lookup for type: '" + type + "' => " + (spell != null ? spell.getClass().getSimpleName() : "null"));
+            if (spell != null) {
+                // Run spell casting on main thread
+                Bukkit.getScheduler().runTask(this, () -> {
+                    try {
+                        spell.cast(player, Collections.emptyMap(), this);
+                        getLogger().info("[DEBUG] Spell '" + type + "' cast successfully for player " + player.getName());
+                    } catch (Exception ex) {
+                        getLogger().warning("[DEBUG] Exception during spell cast: " + ex.getMessage());
+                        ex.printStackTrace();
+                        player.sendMessage(Component.text("Error casting spell: " + ex.getMessage()).color(net.kyori.adventure.text.format.NamedTextColor.RED));
+                    }
+                });
+                return;
+            } else {
+                getLogger().warning("[DEBUG] No Spell implementation found for type: '" + type + "'");
+            }
+        } else {
+            getLogger().info("[DEBUG] No spell type found for incantation: '" + incantation + "'");
+        }
+        player.sendMessage(Component.text("Unknown spell: '" + message.trim() + "'.").color(net.kyori.adventure.text.format.NamedTextColor.RED));
+    }
+
+    // All magic mode and interruption handlers removed (not needed for stick-only casting)
 }

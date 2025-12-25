@@ -110,6 +110,7 @@ lumos:
 nox:
   type: extinguish
   description: Extinguishes light created by Lumos
+  aliases: [extinguish, dark]
 
 stupefy:
   type: stun
@@ -186,3 +187,7 @@ tarantallegra:
 ridikkulus:
   type: transform
   description: Transforms a Boggart into something humorous (Boggart-Banishing Spell)
+
+fireball:
+  type: fireball
+  aliases: [flare, boom]
