@@ -70,9 +70,14 @@ public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
                 }
                 return true;
             }
-            if (sender instanceof Player) {
-                Player player = (Player) sender;
-                player.sendMessage("§dCasterOS is active! Right-click with a stick to cast a spell.");
+            // Show help/info, with reload help only for OPs
+            if (sender instanceof Player player) {
+                StringBuilder help = new StringBuilder();
+                help.append("§dCasterOS is active! Right-click with a stick to cast a spell.\n");
+                if (player.isOp()) {
+                    help.append("§7/casteros reload - Reload spells.yml (OP only)");
+                }
+                player.sendMessage(help.toString());
             } else {
                 sender.sendMessage("CasterOS command can only be used by players.");
             }

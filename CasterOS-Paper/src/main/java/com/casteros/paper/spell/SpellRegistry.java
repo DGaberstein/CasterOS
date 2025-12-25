@@ -43,6 +43,10 @@ public class SpellRegistry {
         registerSpell(new ChainLightningSpell());
         registerSpell(new VoidPullSpell());
         registerSpell(new WaterSplashSpell());
+        registerSpell(new IceShardSpell());
+        registerSpell(new FrostNovaSpell());
+        registerSpell(new FreezeSpell());
+        registerSpell(new BlizzardSpell());
         // Register more spells here as you modularize them
     }
 }

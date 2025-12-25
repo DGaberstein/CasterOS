@@ -1,3 +1,33 @@
+iceshard:
+  type: iceshard
+  description: Shoots a fast ice projectile that slows and damages the target
+  aliases:
+    - ice_shard
+    - icebolt
+    - ice
+
+frostnova:
+  type: frostnova
+  description: Area-of-effect blast that slows and damages nearby enemies
+  aliases:
+    - frost_nova
+    - frost
+    - nova
+
+freeze:
+  type: freeze
+  description: Freezes the nearest target in place for a short duration
+  aliases:
+    - icefreeze
+    - frostbite
+
+blizzard:
+  type: blizzard
+  description: Creates a storm of snowballs in an area, dealing damage and slowing
+  aliases:
+    - iceblizzard
+    - snowstorm
+    - storm
 # spells.yml
 flare:
   type: fireball
