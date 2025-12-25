@@ -1,0 +1,101 @@
+# spells.yml
+flare:
+  type: fireball
+  description: Launches a fireball in the direction the player is looking
+  aliases:
+    - fire
+    - fireball
+  
+shield:
+  type: shield
+  description: Creates a protective barrier
+  aliases:
+    - protection
+    - barrier
+
+blink:
+  type: teleport
+  description: Teleports the player forward
+  aliases:
+    - teleport
+    - tp
+
+frostbolt:
+  type: snowball
+  description: Launches a freezing snowball that slows targets
+
+gust:
+  type: wind
+  description: Pushes entities away from the caster
+
+heal:
+  type: heal
+  description: Instantly restores some health to the caster
+  aliases:
+    - cure
+    - mend
+
+lightning:
+  type: lightning
+  description: Strikes lightning at the target location
+  aliases:
+    - thunder
+    - bolt
+
+levitate:
+  type: levitate
+  description: Makes the caster float for a short time
+
+explosion:
+  type: explosion
+  description: Creates a small explosion at the target location
+
+invisibility:
+  type: invisibility
+  description: Makes the caster invisible for a short duration
+
+summonwolf:
+  type: summonwolf
+  description: Summons a loyal wolf companion
+
+summoncat:
+  type: summoncat
+  description: Summons a magical cat companion
+  aliases:
+    - cat
+    - feline
+
+summongolem:
+  type: summongolem
+  description: Summons a mighty iron golem guardian
+  aliases:
+    - golem
+    - guardian
+
+firewall:
+  type: firewall
+  description: Creates a wall of fire in front of the caster
+
+gravitywell:
+  type: gravity
+  description: Pulls nearby entities toward a point
+
+poisoncloud:
+  type: poison
+  description: Creates a lingering cloud that poisons enemies
+
+haste:
+  type: haste
+  description: Greatly increases the caster's movement speed
+
+slow:
+  type: slow
+  description: Slows all nearby enemies
+
+earthquake:
+  type: earthquake
+  description: Shakes the ground and knocks back entities
+
+arcane_blast:
+  type: arcane
+  description: Releases a blast of arcane energy

@@ -1,15 +1,15 @@
 package com.casteros.paper.spell;
 
-import org.bukkit.plugin.Plugin;
+// import org.bukkit.plugin.Plugin;
 import java.util.HashMap;
 import java.util.Map;
 
 public class SpellRegistry {
     private final Map<String, Spell> spellRegistry = new HashMap<>();
-    private final Plugin plugin;
+    // private final Plugin plugin;
 
-    public SpellRegistry(Plugin plugin) {
-        this.plugin = plugin;
+    public SpellRegistry() {
+        // this.plugin = plugin;
     }
 
     public void registerSpell(Spell spell) {
@@ -37,6 +37,12 @@ public class SpellRegistry {
         registerSpell(new ExplosionSpell());
         registerSpell(new LevitateSpell());
         registerSpell(new SummonWolfSpell());
+        registerSpell(new SummonCatSpell());
+        registerSpell(new SummonIronGolemSpell());
+        registerSpell(new FirewallSpell());
+        registerSpell(new ChainLightningSpell());
+        registerSpell(new VoidPullSpell());
+        registerSpell(new WaterSplashSpell());
         // Register more spells here as you modularize them
     }
 }

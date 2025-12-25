@@ -19,7 +19,27 @@ public class LightningSpell implements Spell {
         player.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, target, 50, 0.7, 0.7, 0.7, 0.02);
         // Play thunder sound
         player.getWorld().playSound(target, org.bukkit.Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 2.0f, 1.0f);
-        player.sendMessage(Component.text("Lightning spell cast! Lightning strikes!").color(NamedTextColor.YELLOW));
+
+        // Synergy: double damage if target is 'wet'
+        double baseDamage = 8.0;
+        boolean synergy = false;
+        for (org.bukkit.entity.Entity e : player.getWorld().getNearbyEntities(target, 2, 2, 2)) {
+            if (e instanceof org.bukkit.entity.LivingEntity le && le != player) {
+                double damage = baseDamage;
+                if (StatusEffectManager.hasStatus(le, "wet")) {
+                    damage *= 2;
+                    synergy = true;
+                    StatusEffectManager.clearStatus(le, "wet");
+                    le.getWorld().spawnParticle(Particle.WATER_SPLASH, le.getLocation().add(0,1,0), 20, 0.5, 0.5, 0.5, 0.1);
+                }
+                le.damage(damage, player);
+            }
+        }
+        if (synergy) {
+            player.sendMessage(Component.text("Synergy! Wet target: Lightning deals double damage!").color(NamedTextColor.AQUA));
+        } else {
+            player.sendMessage(Component.text("Lightning spell cast! Lightning strikes!").color(NamedTextColor.YELLOW));
+        }
     }
 
     @Override

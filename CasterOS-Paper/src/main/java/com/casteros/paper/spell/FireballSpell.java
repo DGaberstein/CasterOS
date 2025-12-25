@@ -13,8 +13,15 @@ public class FireballSpell implements Spell {
     @Override
     public void cast(Player player, Map<String, Object> spellConfig, Plugin plugin) {
         Location loc = player.getEyeLocation();
+        // Synergy: Combustion (if player has 'wind' status, fireball is faster)
+        double speed = 1.5;
+        if (StatusEffectManager.hasStatus(player, "wind")) {
+            speed = 3.0;
+            StatusEffectManager.clearStatus(player, "wind");
+            player.sendMessage(Component.text("Synergy! Combustion: Fireball travels twice as fast!").color(NamedTextColor.GOLD));
+        }
         // Launch a fireball projectile in the direction the player is looking
-        Fireball fireball = player.launchProjectile(Fireball.class, loc.getDirection().multiply(1.5));
+        Fireball fireball = player.launchProjectile(Fireball.class, loc.getDirection().multiply(speed));
         fireball.setIsIncendiary(true);
         fireball.setYield(2.5f); // explosion power
         // Visual: spawn flame and lava particles at launch

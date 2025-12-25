@@ -20,9 +20,8 @@ public class SummonWolfSpell implements Spell {
         // Summon wolf
         Wolf wolf = player.getWorld().spawn(loc, Wolf.class);
         wolf.setOwner(player);
-        // Use legacy setCustomName(String) for maximum compatibility, suppressing deprecation warning
-        @SuppressWarnings("deprecation")
-        String wolfName = "Spellbound Wolf";
+        // Set custom name to include player's name using Adventure Component
+        String wolfName = player.getName() + "'s Wolf";
         wolf.setCustomName(wolfName);
         wolf.setCustomNameVisible(true);
         player.sendMessage(Component.text("Summon Wolf spell cast! A loyal wolf appears.").color(NamedTextColor.GRAY));

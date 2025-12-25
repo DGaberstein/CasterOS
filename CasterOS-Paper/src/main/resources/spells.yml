@@ -55,8 +55,22 @@ invisibility:
   description: Makes the caster invisible for a short duration
 
 summonwolf:
-  type: summon
+  type: summonwolf
   description: Summons a loyal wolf companion
+
+summoncat:
+  type: summoncat
+  description: Summons a magical cat companion
+  aliases:
+    - cat
+    - feline
+
+summongolem:
+  type: summongolem
+  description: Summons a mighty iron golem guardian
+  aliases:
+    - golem
+    - guardian
 
 firewall:
   type: firewall

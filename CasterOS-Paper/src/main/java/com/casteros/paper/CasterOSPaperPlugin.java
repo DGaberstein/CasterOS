@@ -6,7 +6,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
+import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import java.util.*;
@@ -65,14 +65,20 @@ public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
         // Register events
         Bukkit.getPluginManager().registerEvents(this, this);
         // Register spells
-        spellRegistry = new SpellRegistry(this);
+        spellRegistry = new SpellRegistry();
         spellRegistry.registerAllSpells();
 
-        // Load spells.yml and build incantation/alias map
+        // Load spells.yml from plugin data folder, copy default if missing
         try {
-            File configFile = new File(getDataFolder().getParentFile(), getName() + "/src/main/resources/spells.yml");
+            File configFile = new File(getDataFolder(), "spells.yml");
             if (!configFile.exists()) {
-                configFile = new File(getDataFolder(), "spells.yml");
+                getDataFolder().mkdirs();
+                try (java.io.InputStream in = getResource("spells.yml")) {
+                    if (in != null) {
+                        java.nio.file.Files.copy(in, configFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        getLogger().info("Default spells.yml copied to data folder.");
+                    }
+                }
             }
             YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
             for (String key : config.getKeys(false)) {
@@ -105,6 +111,11 @@ public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (label.equalsIgnoreCase("casteros")) {
+            if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+                reloadSpellConfig();
+                sender.sendMessage("§aCasterOS spell config reloaded!");
+                return true;
+            }
             if (sender instanceof Player) {
                 Player player = (Player) sender;
                 player.sendMessage("§dCasterOS is active! Right-click with a stick to cast a spell.");
@@ -123,6 +134,42 @@ public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
             return true;
         }
         return false;
+    }
+
+    // Reload spells.yml and rebuild incantation/alias map
+    public void reloadSpellConfig() {
+        incantationToType.clear();
+        try {
+            File configFile = new File(getDataFolder(), "spells.yml");
+            if (!configFile.exists()) {
+                getDataFolder().mkdirs();
+                try (java.io.InputStream in = getResource("spells.yml")) {
+                    if (in != null) {
+                        java.nio.file.Files.copy(in, configFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        getLogger().info("Default spells.yml copied to data folder.");
+                    }
+                }
+            }
+            org.bukkit.configuration.file.YamlConfiguration config = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(configFile);
+            for (String key : config.getKeys(false)) {
+                String normalized = key.toLowerCase().replace("_", "").replace(" ", "");
+                String type = config.getString(key + ".type");
+                if (type != null) {
+                    incantationToType.put(normalized, type.toLowerCase());
+                    // Add aliases
+                    java.util.List<String> aliases = config.getStringList(key + ".aliases");
+                    if (aliases != null) {
+                        for (String alias : aliases) {
+                            String normAlias = alias.toLowerCase().replace("_", "").replace(" ", "");
+                            incantationToType.put(normAlias, type.toLowerCase());
+                        }
+                    }
+                }
+            }
+            getLogger().info("[CasterOS] Spell incantations and aliases reloaded from spells.yml");
+        } catch (Exception e) {
+            getLogger().warning("Failed to reload spells.yml for incantations: " + e.getMessage());
+        }
     }
 
 
@@ -173,16 +220,13 @@ public class CasterOSPaperPlugin extends JavaPlugin implements Listener {
     }
 
 
-    // Intercept chat for spell casting (dynamic, config-driven) - legacy event
-    @EventHandler
-    public void onAsyncPlayerChat(AsyncPlayerChatEvent event) {
-        handleSpellChat(event.getPlayer(), event.getMessage(), event);
-    }
 
-    // Intercept chat for spell casting (dynamic, config-driven) - modern event (Paper 1.19+)
+    // Intercept chat for spell casting (dynamic, config-driven) - Paper 1.19+ AsyncChatEvent
     @EventHandler(ignoreCancelled = true)
-    public void onPlayerChat(org.bukkit.event.player.PlayerChatEvent event) {
-        handleSpellChat(event.getPlayer(), event.getMessage(), event);
+    public void onAsyncChat(AsyncChatEvent event) {
+        // Extract plain text message from Adventure Component (cross-version safe)
+        String message = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.message());
+        handleSpellChat(event.getPlayer(), message, event);
     }
 
     // Shared chat handler for both events
