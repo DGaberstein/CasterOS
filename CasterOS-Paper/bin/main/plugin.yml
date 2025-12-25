@@ -9,6 +9,3 @@ commands:
   casteros:
     description: Test command for CasterOS plugin
     usage: /casteros
-  casteroskeybind:
-    description: Select or view your CasterOS magic keybind
-    usage: /casteroskeybind
