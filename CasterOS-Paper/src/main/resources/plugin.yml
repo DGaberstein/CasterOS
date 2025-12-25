@@ -9,3 +9,4 @@ commands:
   casteros:
     description: Test command for CasterOS plugin
     usage: /casteros
+    aliases: []
